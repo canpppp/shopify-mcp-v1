@@ -1746,6 +1746,119 @@ async def shopify_delete_article(params: DeleteArticleInput) -> str:
         return _error(e)
 
 
+# ═══════════════════════════════════════════════════════════════════════════
+# REDIRECTS (URL redirects — critical for SEO when renaming collections/pages)
+# ═══════════════════════════════════════════════════════════════════════════
+
+class ListRedirectsInput(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    limit:    Optional[int] = Field(default=50, ge=1, le=250)
+    since_id: Optional[int] = Field(default=None)
+    path:     Optional[str] = Field(default=None, description="Filter by source path, e.g. /old-url")
+    target:   Optional[str] = Field(default=None, description="Filter by destination URL")
+    fields:   Optional[str] = Field(default=None)
+
+
+@mcp.tool(
+    name="shopify_list_redirects",
+    annotations={"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True, "openWorldHint": True},
+)
+async def shopify_list_redirects(params: ListRedirectsInput) -> str:
+    """List URL redirects on the store."""
+    try:
+        p: Dict[str, Any] = {"limit": params.limit}
+        for field in ["since_id", "path", "target", "fields"]:
+            val = getattr(params, field)
+            if val is not None:
+                p[field] = val
+        data      = await _request("GET", "redirects.json", params=p)
+        redirects = data.get("redirects", [])
+        return _fmt({"count": len(redirects), "redirects": redirects})
+    except Exception as e:
+        return _error(e)
+
+
+class GetRedirectInput(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    redirect_id: int = Field(..., description="Redirect ID")
+
+
+@mcp.tool(
+    name="shopify_get_redirect",
+    annotations={"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True, "openWorldHint": True},
+)
+async def shopify_get_redirect(params: GetRedirectInput) -> str:
+    """Retrieve a single redirect by ID."""
+    try:
+        data = await _request("GET", f"redirects/{params.redirect_id}.json")
+        return _fmt(data.get("redirect", data))
+    except Exception as e:
+        return _error(e)
+
+
+class CreateRedirectInput(BaseModel):
+    model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
+    path:   str = Field(..., description="Source path on your store, e.g. /collections/old-name")
+    target: str = Field(..., description="Destination: relative path (/collections/new-name) or full URL")
+
+
+@mcp.tool(
+    name="shopify_create_redirect",
+    annotations={"readOnlyHint": False, "destructiveHint": False, "idempotentHint": False, "openWorldHint": True},
+)
+async def shopify_create_redirect(params: CreateRedirectInput) -> str:
+    """Create a URL redirect. Use when renaming collection/page/product handles to preserve SEO."""
+    try:
+        redirect = {"path": params.path, "target": params.target}
+        data = await _request("POST", "redirects.json", body={"redirect": redirect})
+        return _fmt(data.get("redirect", data))
+    except Exception as e:
+        return _error(e)
+
+
+class UpdateRedirectInput(BaseModel):
+    model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
+    redirect_id: int           = Field(..., description="Redirect ID")
+    path:        Optional[str] = Field(default=None)
+    target:      Optional[str] = Field(default=None)
+
+
+@mcp.tool(
+    name="shopify_update_redirect",
+    annotations={"readOnlyHint": False, "destructiveHint": False, "idempotentHint": True, "openWorldHint": True},
+)
+async def shopify_update_redirect(params: UpdateRedirectInput) -> str:
+    """Update an existing redirect."""
+    try:
+        payload: Dict[str, Any] = {"id": params.redirect_id}
+        if params.path is not None:
+            payload["path"] = params.path
+        if params.target is not None:
+            payload["target"] = params.target
+        data = await _request("PUT", f"redirects/{params.redirect_id}.json", body={"redirect": payload})
+        return _fmt(data.get("redirect", data))
+    except Exception as e:
+        return _error(e)
+
+
+class DeleteRedirectInput(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    redirect_id: int = Field(..., description="Redirect ID")
+
+
+@mcp.tool(
+    name="shopify_delete_redirect",
+    annotations={"readOnlyHint": False, "destructiveHint": True, "idempotentHint": True, "openWorldHint": True},
+)
+async def shopify_delete_redirect(params: DeleteRedirectInput) -> str:
+    """Permanently delete a redirect."""
+    try:
+        await _request("DELETE", f"redirects/{params.redirect_id}.json")
+        return _fmt({"deleted": True, "redirect_id": params.redirect_id})
+    except Exception as e:
+        return _error(e)
+
+
 # ---------------------------------------------------------------------------
 # Entrypoint
 # ---------------------------------------------------------------------------
