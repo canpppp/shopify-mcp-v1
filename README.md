@@ -49,7 +49,10 @@ Example: if your admin URL is `https://acme-store.myshopify.com/admin`, your sto
    - `read_inventory`, `write_inventory`
    - `read_fulfillments`, `write_fulfillments`
    - `read_webhooks`, `write_webhooks`
+   - `read_content`, `write_content` *(required for pages — About, Shipping, Returns, etc.)*
 7. Click **Save**
+
+> 💡 **If you already installed this app before:** adding new scopes requires reinstalling. Go to **API credentials** → **Uninstall app** → **Install app** again, then reveal and copy the new token.
 8. Go to the **API credentials** tab → click **Install app** → confirm
 9. Click **Reveal token once** and copy the token immediately — it starts with `shpat_`
 
@@ -203,33 +206,86 @@ When adding the integration in Claude.ai, paste your `BEARER_TOKEN` value into t
 
 | Tool | Description |
 |---|---|
+| **Products** | |
 | `shopify_list_products` | List products with optional filters |
 | `shopify_get_product` | Get a single product by ID |
 | `shopify_create_product` | Create a new product |
 | `shopify_update_product` | Update an existing product |
 | `shopify_delete_product` | Permanently delete a product |
 | `shopify_count_products` | Count products (with filters) |
+| **Orders** | |
 | `shopify_list_orders` | List orders with filters |
 | `shopify_get_order` | Get a single order by ID |
 | `shopify_count_orders` | Count orders |
 | `shopify_close_order` | Close an order |
 | `shopify_cancel_order` | Cancel an order |
+| **Customers** | |
 | `shopify_list_customers` | List customers |
 | `shopify_search_customers` | Search customers by name/email |
 | `shopify_get_customer` | Get a single customer by ID |
 | `shopify_create_customer` | Create a new customer |
 | `shopify_update_customer` | Update an existing customer |
 | `shopify_get_customer_orders` | Get all orders for a customer |
+| **Collections** | |
 | `shopify_list_collections` | List custom or smart collections |
+| `shopify_get_collection` | Get a single collection by ID |
 | `shopify_get_collection_products` | Get products in a collection |
+| `shopify_create_custom_collection` | Create a manually curated collection |
+| `shopify_create_smart_collection` | Create a smart collection with auto-membership rules (e.g. tag = 'graduation-dress') |
+| `shopify_update_collection` | Update a custom or smart collection |
+| `shopify_delete_collection` | Permanently delete a collection |
+| `shopify_add_product_to_collection` | Add a product to a custom collection |
+| `shopify_remove_product_from_collection` | Remove a product from a custom collection |
+| `shopify_list_collects` | List product↔collection links (for finding collect IDs) |
+| **Pages** *(requires read_content/write_content)* | |
+| `shopify_list_pages` | List all pages on the store |
+| `shopify_get_page` | Get a single page by ID |
+| `shopify_create_page` | Create a new page (About, Shipping, Returns, etc.) |
+| `shopify_update_page` | Update an existing page |
+| `shopify_delete_page` | Permanently delete a page |
+| **Blogs & Articles** *(requires read_content/write_content)* | |
+| `shopify_list_blogs` | List blogs (containers for articles) |
+| `shopify_get_blog` | Get a single blog by ID |
+| `shopify_create_blog` | Create a new blog |
+| `shopify_update_blog` | Update blog settings |
+| `shopify_delete_blog` | Delete a blog (and all its articles) |
+| `shopify_list_articles` | List articles (across all blogs, or filtered by blog) |
+| `shopify_get_article` | Get a single article by ID |
+| `shopify_create_article` | Create a new blog article (post) |
+| `shopify_update_article` | Update an existing article |
+| `shopify_delete_article` | Permanently delete an article |
+| **Metafields & SEO** | |
+| `shopify_list_metafields` | List metafields on any resource |
+| `shopify_set_metafield` | Create or update a metafield (upserts by namespace+key) |
+| `shopify_delete_metafield` | Permanently delete a metafield |
+| `shopify_set_seo` | Convenience: set SEO title and/or meta description on a product, collection, page, or article |
+| **Inventory** | |
 | `shopify_list_locations` | List inventory locations |
 | `shopify_get_inventory_levels` | Get current inventory levels |
 | `shopify_set_inventory_level` | Set inventory quantity at a location |
+| **Fulfillments** | |
 | `shopify_list_fulfillments` | List fulfillments for an order |
 | `shopify_create_fulfillment` | Fulfill (ship) an order |
+| **Shop & Webhooks** | |
 | `shopify_get_shop` | Get store info (name, currency, plan, etc.) |
 | `shopify_list_webhooks` | List configured webhooks |
 | `shopify_create_webhook` | Create a new webhook |
+
+### How SEO metafields work
+
+Shopify stores the SEO title and meta description as metafields with these keys:
+- `namespace: global`, `key: title_tag` → SEO title (shown in Google search results)
+- `namespace: global`, `key: description_tag` → meta description
+
+Use `shopify_set_seo` for the common case:
+
+```
+Set SEO on collection 12345:
+  seo_title = "White & Pastel Graduation Dresses 2026 | Kaylas Collectives"
+  seo_description = "Shop graduation dresses in white, pastel & lace styles, babe..."
+```
+
+For other metafields (size charts, custom badges, hreflang URLs, etc.), use `shopify_set_metafield` directly.
 
 ---
 
